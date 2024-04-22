@@ -2,6 +2,7 @@ package main;
 
 import connection.DatabaseConnection;
 import service.Service;
+import java.sql.SQLException;
 
 /**
  *
@@ -56,7 +57,7 @@ public class Main extends javax.swing.JFrame {
         try {
             DatabaseConnection.getInstance().connectToDatabase();
             Service.getInstance(txt).startServer();
-        } catch (Exception e) {
+        } catch (SQLException e) {
             txt.append("Error: " + e + "\n");
         }
     }//GEN-LAST:event_formWindowOpened
