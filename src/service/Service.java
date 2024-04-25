@@ -53,9 +53,9 @@ public class Service {
             @Override
             public void onData(SocketIOClient sioc, Model_Register t, AckRequest ar) throws Exception {
                 // Khi nhận được dữ liệu, nó sẽ gọi phương thức register của lớp ServiceUser để đăng ký người dùng mới.
-//                Model_Message message = new ServiceUser().register(t);
+                Model_Message message = new ServiceUser().register(t);
                 // Kết quả đăng ký sẽ được gửi lại cho client thông qua ar.sendAckData.
-//                ar.sendAckData(message.isAction(), message.getMessage());
+                ar.sendAckData(message.isAction(), message.getMessage());
                 textArea.append("User Register: " + t.getUserName() + "    Pass: " + t.getPassword() + "\n");
             }
         });
