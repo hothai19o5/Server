@@ -3,10 +3,6 @@ package model;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-/**
- *
- * @author admin
- */
 public class Model_Register {
     private String userName;
     private String password;

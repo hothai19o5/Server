@@ -9,15 +9,13 @@ import com.corundumstudio.socketio.listener.DataListener;
 import java.sql.SQLException;
 import java.util.List;
 import javax.swing.JTextArea;
+import model.Model_Login;
 import model.Model_Register;
 import model.Model_Message;
 import model.Model_User_Account;
 
-/**
- *
- * @author admin
- */
 public class Service {
+
     // Khai báo các biến instance để đảm bảo lớp Service chỉ có một đối tượng duy nhất (Singleton pattern).
     private static Service instance;
     // server là đối tượng SocketIOServer để quản lý kết nối và giao tiếp với các client.
@@ -27,20 +25,23 @@ public class Service {
     private JTextArea textArea;
     // server là đối tượng SocketIOServer để quản lý kết nối và giao tiếp với các client.
     private final int PORT_NUMBER = 9999;
+
     // Phương thức getInstance trả về đối tượng duy nhất của lớp Service. Nếu chưa có đối tượng nào, nó sẽ tạo mới một đối tượng với textArea đã cho.
-    public static Service getInstance(JTextArea textArea){
-        if(instance == null){
+    public static Service getInstance(JTextArea textArea) {
+        if (instance == null) {
             instance = new Service(textArea);
         }
         return instance;
     }
+
     // Constructor riêng tư của lớp Service để khởi tạo textArea.
-    private Service(JTextArea textArea){
+    private Service(JTextArea textArea) {
         this.textArea = textArea;
         serviceUser = new ServiceUser();
     }
+
     // Phương thức startServer để khởi tạo và bắt đầu server.
-    public void startServer(){
+    public void startServer() {
         // Đầu tiên, nó tạo một đối tượng Configuration và thiết lập cổng lắng nghe là PORT_NUMBER.
         Configuration config = new Configuration();
         config.setPort(PORT_NUMBER);
@@ -53,6 +54,18 @@ public class Service {
                 textArea.append("One client connected\n");
             }
         });
+        // Đăng ký sự kiện DataListener cho sự kiện "login".
+        server.addEventListener("login", Model_Login.class, new DataListener<Model_Login>() {
+            @Override
+            public void onData(SocketIOClient sioc, Model_Login t, AckRequest ar) throws Exception {
+                Model_User_Account login = serviceUser.login(t); 
+                if(login != null){
+                    ar.sendAckData(true, login);
+                } else {
+                    ar.sendAckData(false);
+                }
+            }
+        });
         // Nó cũng đăng ký một DataListener để xử lý sự kiện khi nhận được dữ liệu từ client với tên sự kiện là "register" và dữ liệu thuộc kiểu Model_Register.
         server.addEventListener("register", Model_Register.class, new DataListener<Model_Register>() {
             @Override
@@ -61,19 +74,21 @@ public class Service {
                 Model_Message message = serviceUser.register(t);
                 // Kết quả đăng ký sẽ được gửi lại cho client thông qua ar.sendAckData.
                 ar.sendAckData(message.isAction(), message.getMessage(), message.getData());
-                if(message.isAction()){
+                if (message.isAction()) {
                     textArea.append("User Register: " + t.getUserName() + "    Pass: " + t.getPassword() + "\n");
+                    // Gửi sự kiện "list_user" cho tất cả các client, kèm theo thông tin người dùng mới.
                     server.getBroadcastOperations().sendEvent("list_user", (Model_User_Account) message.getData());
-                    
                 }
             }
         });
-        
+        // Đăng ký sự kiện DataListener cho sự kiện "list_user".
         server.addEventListener("list_user", Integer.class, new DataListener<Integer>() {
             @Override
             public void onData(SocketIOClient sioc, Integer userID, AckRequest ar) throws Exception {
+                // Khi nhận được sự kiện "list_user", trả lại danh sách các tài khoản người dùng ngoại trừ người dùng có userID đã cho.
                 try {
                     List<Model_User_Account> list = serviceUser.getUser(userID);
+                    // Gửi danh sách người dùng trở lại client.
                     sioc.sendEvent("list_user", list.toArray());
                 } catch (SQLException e) {
                     e.printStackTrace();
@@ -82,6 +97,6 @@ public class Service {
         });
         // Sau đó, server sẽ bắt đầu chạy bằng cách gọi phương thức start() và ghi log vào textArea.
         server.start();
-        textArea.append("Server has start on port: "+PORT_NUMBER+"\n");
+        textArea.append("Server has start on port: " + PORT_NUMBER + "\n");
     }
 }

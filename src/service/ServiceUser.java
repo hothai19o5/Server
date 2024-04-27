@@ -9,17 +9,16 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
+import model.Model_Login;
 import model.Model_User_Account;
 
-/**
- *
- * @author admin
- */
 public class ServiceUser {
+
     // Khởi tạo đối tượng ServiceUser và lấy đối tượng Connection từ DatabaseConnection để thực hiện các truy vấn SQL.
-    public ServiceUser(){
+    public ServiceUser() {
         this.con = DatabaseConnection.getInstance().getConnection();
     }
+
     // Phương thức register nhận đối tượng Model_Register chứa thông tin người dùng muốn đăng ký.
     public Model_Message register(Model_Register data) {
         //  Check user exit
@@ -30,9 +29,9 @@ public class ServiceUser {
             có thể nó sẽ trả về false hoặc là ném ngoại lệ, để không bị ném ngoại lêj thì ta cần đảm bảo rằng ResultSet có 
             thể di chuyển (scrollable).                     Lỗi này sửa lúc 23h20p - 25/4/24 - Cùng với Vũ Ngọc Lâm*/
             PreparedStatement p = con.prepareStatement(CHECK_USER,
-                         ResultSet.TYPE_SCROLL_INSENSITIVE, // Cho phép di chuyển mà không bị ảnh hưởng bởi thay đổi cơ sở dữ liệu
-                        ResultSet.CONCUR_READ_ONLY // Chỉ cho phép đọc, không thể chỉnh sửa
-                            );
+                    ResultSet.TYPE_SCROLL_INSENSITIVE, // Cho phép di chuyển mà không bị ảnh hưởng bởi thay đổi cơ sở dữ liệu
+                    ResultSet.CONCUR_READ_ONLY // Chỉ cho phép đọc, không thể chỉnh sửa
+            );
             p.setString(1, data.getUserName());
             ResultSet r = p.executeQuery();
             // Nếu tên người dùng đã tồn tại, message sẽ được thiết lập với action=false và thông báo "User Already Exit".
@@ -44,7 +43,7 @@ public class ServiceUser {
             }
             r.close();
             p.close();
-            
+
             // Nếu tên người dùng chưa tồn tại, nó sẽ thực hiện câu lệnh SQL INSERT_USER để thêm người dùng mới vào cơ sở dữ liệu.
             if (message.isAction()) {
                 //  Insert User Register
@@ -79,12 +78,12 @@ public class ServiceUser {
                 message.setData(new Model_User_Account(data.getUserName(), userID, "", "", true));
             }
         } catch (SQLException e) {
-            // Nếu có lỗi xảy ra trong quá trình thực hiện SQL, message sẽ được thiết lập với action=false và thông báo "Server Error".
-            message.setAction(false);
+            /* Nếu có lỗi xảy ra trong quá trình thực hiện SQL, 
+                nó sẽ rollback giao dịch và trả về đối tượng Model_Message với action=false và thông báo "Server Error".*/ message.setAction(false);
             message.setMessage("Server Error");
             e.printStackTrace();
             try {
-                if(con.getAutoCommit() == false){
+                if (con.getAutoCommit() == false) {
                     con.rollback();
                     con.setAutoCommit(true);
                 }
@@ -92,15 +91,44 @@ public class ServiceUser {
                 e1.printStackTrace();
             }
         }
+        // Trả về thông báo kết quả đăng ký.
         return message;
     }
-    
-    public List<Model_User_Account> getUser(int exitUser) throws SQLException{
+    // Phương thức lấy tài khoảng người dùng từ tài khoản và mật khẩu
+    public Model_User_Account login(Model_Login login) throws SQLException {
+        Model_User_Account data = null;
+        // Thiết lập giá trị cho câu lệnh
+        PreparedStatement p = con.prepareStatement(LOGIN,
+                    ResultSet.TYPE_SCROLL_INSENSITIVE, // Cho phép di chuyển mà không bị ảnh hưởng bởi thay đổi cơ sở dữ liệu
+                    ResultSet.CONCUR_READ_ONLY // Chỉ cho phép đọc, không thể chỉnh sửa
+        );
+        p.setString(1, login.getUserName());
+        p.setString(2, login.getPassword());
+        // Thực hiện câu lệnh
+        ResultSet r = p.executeQuery();
+        if (r.first()) {
+            int userID = r.getInt(1);
+            String userName = r.getString(2);
+            String gender = r.getString(3);
+            String image = r.getString(4);
+            data = new Model_User_Account(userName, userID, gender, image, true);
+        }
+        r.close();
+        p.close();
+        return data;
+    }
+
+    // Phương thức lấy danh sách tài khoản người dùng, ngoại trừ một tài khoản nhất định.
+    public List<Model_User_Account> getUser(int exitUser) throws SQLException {
+        // Tạo danh sách để chứa các tài khoản.
         List<Model_User_Account> list = new ArrayList<>();
         PreparedStatement p = con.prepareStatement(SELECT_USER_ACCOUNT);
+        // Thiết lập giá trị cho câu lệnh (UserID ngoại trừ).
         p.setInt(1, exitUser);
+        // Thực thi câu lệnh.
         ResultSet r = p.executeQuery();
-        while(r.next()){
+        // Thêm các user vào list
+        while (r.next()) {
             int UserID = r.getInt(1);
             String UserName = r.getString(2);
             String Gender = r.getString(3);
@@ -111,12 +139,17 @@ public class ServiceUser {
         p.close();
         return list;
     }
-    // Đây là hai câu lệnh SQL được sử dụng để thêm người dùng mới và kiểm tra tên người dùng đã tồn tại hay chưa.
+    // Câu lệnh SQL để lấy dữ liệu của 1 user từ 2 bảng user và user_account
+    private String LOGIN = "SELECT UserID, user_account.UserName, Gender, ImageString FROM `user` JOIN user_account USING (UserID) WHERE `user`.UserName=BINARY (?) AND `user`.`Password`=BINARY (?) AND user_account.`Status`='1'";
+    // Câu lệnh SQL thêm người dùng
     private String INSERT_USER = "INSERT INTO user (UserName, `Password`) VALUES (?,?)";
+    // Câu lệnh SQL thêm tài khoản người dùng
     private String INSERT_USER_ACCOUNT = "INSERT INTO user_account (UserID, UserName) VALUES (?,?)";
+    // Câu lệnh SQL kiểm tra người dùng đã tồn tại trong database chưa
     private String CHECK_USER = "SELECT UserID FROM user WHERE UserName =? LIMIT 1";
-    private String SELECT_USER_ACCOUNT = "SELECT UserID, UserName, Gender, ImageString FROM user_account WHERE user_account.`Status` = '1' and UserID<>?";
-    
+    // Câu lệnh SQL chọn các tài khoản từ database với điều kiện status = 1 và UserID != exitUserID
+    private String SELECT_USER_ACCOUNT = "SELECT UserID, UserName, Gender, ImageString FROM user_account WHERE user_account.`Status` = '1' and UserID <> ?";
+
     // Đối tượng Connection được sử dụng để thực hiện các câu lệnh SQL với cơ sở dữ liệu.
     private Connection con;
 }
