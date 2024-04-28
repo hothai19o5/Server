@@ -9,6 +9,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
+import model.Model_Client;
 import model.Model_Login;
 import model.Model_User_Account;
 
@@ -133,11 +134,21 @@ public class ServiceUser {
             String UserName = r.getString(2);
             String Gender = r.getString(3);
             String ImageString = r.getString(4);
-            list.add(new Model_User_Account(UserName, UserID, Gender, ImageString, true));
+            list.add(new Model_User_Account(UserName, UserID, Gender, ImageString, checkUserStatus(UserID)));
         }
         r.close();
         p.close();
         return list;
+    }
+    
+    private boolean checkUserStatus(int UserID){
+        List<Model_Client> clients = Service.getInstance(null).getListClient();
+        for(Model_Client mc : clients){
+            if(mc.getUser().getUserID() == UserID){
+                return true;
+            }
+        }
+        return false;
     }
     // Câu lệnh SQL để lấy dữ liệu của 1 user từ 2 bảng user và user_account
     private String LOGIN = "SELECT UserID, user_account.UserName, Gender, ImageString FROM `user` JOIN user_account USING (UserID) WHERE `user`.UserName=BINARY (?) AND `user`.`Password`=BINARY (?) AND user_account.`Status`='1'";

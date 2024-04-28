@@ -6,9 +6,12 @@ import com.corundumstudio.socketio.SocketIOClient;
 import com.corundumstudio.socketio.SocketIOServer;
 import com.corundumstudio.socketio.listener.ConnectListener;
 import com.corundumstudio.socketio.listener.DataListener;
+import com.corundumstudio.socketio.listener.DisconnectListener;
 import java.sql.SQLException;
+import java.util.ArrayList;
 import java.util.List;
 import javax.swing.JTextArea;
+import model.Model_Client;
 import model.Model_Login;
 import model.Model_Register;
 import model.Model_Message;
@@ -21,10 +24,9 @@ public class Service {
     // server là đối tượng SocketIOServer để quản lý kết nối và giao tiếp với các client.
     private SocketIOServer server;
     private ServiceUser serviceUser;
-    // server là đối tượng SocketIOServer để quản lý kết nối và giao tiếp với các client.
     private JTextArea textArea;
-    // server là đối tượng SocketIOServer để quản lý kết nối và giao tiếp với các client.
     private final int PORT_NUMBER = 9999;
+    private List<Model_Client> listClient;
 
     // Phương thức getInstance trả về đối tượng duy nhất của lớp Service. Nếu chưa có đối tượng nào, nó sẽ tạo mới một đối tượng với textArea đã cho.
     public static Service getInstance(JTextArea textArea) {
@@ -38,6 +40,7 @@ public class Service {
     private Service(JTextArea textArea) {
         this.textArea = textArea;
         serviceUser = new ServiceUser();
+        listClient = new ArrayList<>();
     }
 
     // Phương thức startServer để khởi tạo và bắt đầu server.
@@ -61,6 +64,8 @@ public class Service {
                 Model_User_Account login = serviceUser.login(t); 
                 if(login != null){
                     ar.sendAckData(true, login);
+                    addClient(sioc, login);
+                    userConnect(login.getUserID());
                 } else {
                     ar.sendAckData(false);
                 }
@@ -78,6 +83,7 @@ public class Service {
                     textArea.append("User Register: " + t.getUserName() + "    Pass: " + t.getPassword() + "\n");
                     // Gửi sự kiện "list_user" cho tất cả các client, kèm theo thông tin người dùng mới.
                     server.getBroadcastOperations().sendEvent("list_user", (Model_User_Account) message.getData());
+                    addClient(sioc, (Model_User_Account) message.getData());
                 }
             }
         });
@@ -95,8 +101,43 @@ public class Service {
                 }
             }
         });
+        
+        server.addDisconnectListener(new DisconnectListener() {
+            @Override
+            public void onDisconnect(SocketIOClient sioc) {
+                int userID = removeClient(sioc);
+                if(userID != 0){
+                    userDisconnect(userID);
+                }
+            }
+        });
         // Sau đó, server sẽ bắt đầu chạy bằng cách gọi phương thức start() và ghi log vào textArea.
         server.start();
         textArea.append("Server has start on port: " + PORT_NUMBER + "\n");
+      
+    }
+    private void userConnect(int userID){
+        server.getBroadcastOperations().sendEvent("user_status", userID, true);
+    }
+    
+    private void userDisconnect(int userID){
+        server.getBroadcastOperations().sendEvent("user_status", userID, false);
+    }
+    private void addClient(SocketIOClient client, Model_User_Account user){
+        listClient.add(new Model_Client(client, user));
+    }
+    
+    public int removeClient(SocketIOClient client){
+        for(Model_Client mc : listClient){
+            if(mc.getClient() == client){
+                listClient.remove(mc);
+                return mc.getUser().getUserID();
+            }
+        }
+        return 0;
+    }
+    
+    public List<Model_Client> getListClient() {
+        return listClient;
     }
 }
