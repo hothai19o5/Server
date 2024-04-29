@@ -1,143 +1,174 @@
 package service;
 
-import com.corundumstudio.socketio.AckRequest;
-import com.corundumstudio.socketio.Configuration;
-import com.corundumstudio.socketio.SocketIOClient;
-import com.corundumstudio.socketio.SocketIOServer;
-import com.corundumstudio.socketio.listener.ConnectListener;
-import com.corundumstudio.socketio.listener.DataListener;
-import com.corundumstudio.socketio.listener.DisconnectListener;
-import java.sql.SQLException;
-import java.util.ArrayList;
-import java.util.List;
-import javax.swing.JTextArea;
-import model.Model_Client;
-import model.Model_Login;
-import model.Model_Register;
-import model.Model_Message;
-import model.Model_User_Account;
+import com.corundumstudio.socketio.AckRequest; // Để xử lý các yêu cầu xác nhận từ client
+import com.corundumstudio.socketio.Configuration; // Cấu hình cho SocketIO server
+import com.corundumstudio.socketio.SocketIOClient; // Đại diện cho một client kết nối với server
+import com.corundumstudio.socketio.SocketIOServer; // Máy chủ SocketIO để quản lý kết nối và sự kiện
+import com.corundumstudio.socketio.listener.ConnectListener; // Để lắng nghe sự kiện kết nối
+import com.corundumstudio.socketio.listener.DataListener; // Để lắng nghe sự kiện dữ liệu
+import com.corundumstudio.socketio.listener.DisconnectListener; // Để lắng nghe sự kiện ngắt kết nối
+import java.sql.SQLException; // Xử lý ngoại lệ SQL
+import java.util.ArrayList; // Tạo danh sách các phần tử
+import java.util.List; // Khai báo loại List
+import javax.swing.JTextArea; // Để hiển thị thông tin trên giao diện người dùng
+import model.Model_Client; // Định nghĩa đối tượng Model_Client
+import model.Model_Login; // Định nghĩa đối tượng Model_Login
+import model.Model_Register; // Định nghĩa đối tượng Model_Register
+import model.Model_Message; // Định nghĩa đối tượng Model_Message
+import model.Model_Receive_Message;
+import model.Model_Send_Message;
+import model.Model_User_Account; // Định nghĩa đối tượng Model_User_Account
 
 public class Service {
 
     // Khai báo các biến instance để đảm bảo lớp Service chỉ có một đối tượng duy nhất (Singleton pattern).
-    private static Service instance;
-    // server là đối tượng SocketIOServer để quản lý kết nối và giao tiếp với các client.
-    private SocketIOServer server;
-    private ServiceUser serviceUser;
-    private JTextArea textArea;
-    private final int PORT_NUMBER = 9999;
-    private List<Model_Client> listClient;
+    private static Service instance; // Biến instance của lớp Singleton Service
+    private SocketIOServer server; // Đối tượng SocketIOServer quản lý kết nối và giao tiếp với các client
+    private ServiceUser serviceUser; // Dịch vụ quản lý người dùng
+    private JTextArea textArea; // Đối tượng JTextArea để hiển thị thông tin
+    private final int PORT_NUMBER = 9999; // Cổng mà máy chủ sẽ lắng nghe
+    private List<Model_Client> listClient; // Danh sách các client đã kết nối
 
     // Phương thức getInstance trả về đối tượng duy nhất của lớp Service. Nếu chưa có đối tượng nào, nó sẽ tạo mới một đối tượng với textArea đã cho.
     public static Service getInstance(JTextArea textArea) {
-        if (instance == null) {
-            instance = new Service(textArea);
+        if (instance == null) { // Nếu instance chưa tồn tại, tạo mới
+            instance = new Service(textArea); // Tạo đối tượng Service mới với textArea
         }
-        return instance;
+        return instance; // Trả về instance
     }
 
-    // Constructor riêng tư của lớp Service để khởi tạo textArea.
+    // Constructor riêng tư của lớp Service để khởi tạo textArea, serviceUser, listClient
     private Service(JTextArea textArea) {
-        this.textArea = textArea;
-        serviceUser = new ServiceUser();
-        listClient = new ArrayList<>();
+        this.textArea = textArea; // Lưu trữ đối tượng JTextArea
+        serviceUser = new ServiceUser(); // Tạo đối tượng serviceUser mới
+        listClient = new ArrayList<>(); // Khởi tạo danh sách client rỗng
     }
 
     // Phương thức startServer để khởi tạo và bắt đầu server.
     public void startServer() {
-        // Đầu tiên, nó tạo một đối tượng Configuration và thiết lập cổng lắng nghe là PORT_NUMBER.
-        Configuration config = new Configuration();
-        config.setPort(PORT_NUMBER);
-        // Sau đó, nó tạo một đối tượng SocketIOServer với cấu hình đã cho.
-        server = new SocketIOServer(config);
-        // Tiếp theo, nó đăng ký một ConnectListener để xử lý sự kiện khi có client kết nối đến server và ghi log vào textArea.
+        // Đầu tiên, tạo đối tượng Configuration và thiết lập cổng lắng nghe là PORT_NUMBER.
+        Configuration config = new Configuration(); // Cấu hình server
+        config.setPort(PORT_NUMBER); // Thiết lập cổng lắng nghe
+        // Sau đó, tạo đối tượng SocketIOServer với cấu hình đã cho.
+        server = new SocketIOServer(config); // Tạo máy chủ SocketIO với cấu hình
+        // Đăng ký một ConnectListener để xử lý sự kiện khi có client kết nối đến server và ghi log vào textArea.
         server.addConnectListener(new ConnectListener() {
             @Override
             public void onConnect(SocketIOClient sioc) {
-                textArea.append("One client connected\n");
+                textArea.append("One client connected\n"); // Ghi log khi có client kết nối
             }
         });
         // Đăng ký sự kiện DataListener cho sự kiện "login".
         server.addEventListener("login", Model_Login.class, new DataListener<Model_Login>() {
             @Override
             public void onData(SocketIOClient sioc, Model_Login t, AckRequest ar) throws Exception {
-                Model_User_Account login = serviceUser.login(t); 
-                if(login != null){
-                    ar.sendAckData(true, login);
-                    addClient(sioc, login);
-                    userConnect(login.getUserID());
+                // Xử lý khi nhận dữ liệu đăng nhập từ client
+                Model_User_Account login = serviceUser.login(t); // Thực hiện đăng nhập
+                if (login != null) {
+                    // Gửi xác nhận thành công và thông tin người dùng về client
+                    ar.sendAckData(true, login); // Gửi xác nhận thành công
+                    // Thêm client mới vào danh sách client từ dữ liệu nhận được
+                    addClient(sioc, login); // Thêm client vào danh sách                  
+                    // Thông báo khi người dùng đã kết nối thành công
+                    userConnect(login.getUserID()); 
                 } else {
+                    // Nếu đăng nhập thất bại, gửi xác nhận không thành công
                     ar.sendAckData(false);
                 }
             }
         });
-        // Nó cũng đăng ký một DataListener để xử lý sự kiện khi nhận được dữ liệu từ client với tên sự kiện là "register" và dữ liệu thuộc kiểu Model_Register.
+        
+        // Đăng ký một DataListener cho sự kiện "register".
         server.addEventListener("register", Model_Register.class, new DataListener<Model_Register>() {
             @Override
             public void onData(SocketIOClient sioc, Model_Register t, AckRequest ar) throws Exception {
-                // Khi nhận được dữ liệu, nó sẽ gọi phương thức register của lớp ServiceUser để đăng ký người dùng mới.
-                Model_Message message = serviceUser.register(t);
-                // Kết quả đăng ký sẽ được gửi lại cho client thông qua ar.sendAckData.
+                // Xử lý khi nhận dữ liệu đăng ký từ client
+                Model_Message message = serviceUser.register(t); // Đăng ký người dùng mới
+                // Gửi phản hồi về kết quả đăng ký
                 ar.sendAckData(message.isAction(), message.getMessage(), message.getData());
-                if (message.isAction()) {
-                    textArea.append("User Register: " + t.getUserName() + "    Pass: " + t.getPassword() + "\n");
-                    // Gửi sự kiện "list_user" cho tất cả các client, kèm theo thông tin người dùng mới.
+                
+                if (message.isAction()) { // Nếu đăng ký thành công
+                    textArea.append("User Register: " + t.getUserName() + "    Pass: " + t.getPassword() + "\n"); // Ghi log đăng ký mới
+                    // Gửi sự kiện "list_user" tới tất cả các client
                     server.getBroadcastOperations().sendEvent("list_user", (Model_User_Account) message.getData());
-                    addClient(sioc, (Model_User_Account) message.getData());
+                    // Thêm client mới vào danh sách client
+                        addClient(sioc, (Model_User_Account) message.getData());
                 }
             }
         });
+        
         // Đăng ký sự kiện DataListener cho sự kiện "list_user".
         server.addEventListener("list_user", Integer.class, new DataListener<Integer>() {
             @Override
             public void onData(SocketIOClient sioc, Integer userID, AckRequest ar) throws Exception {
-                // Khi nhận được sự kiện "list_user", trả lại danh sách các tài khoản người dùng ngoại trừ người dùng có userID đã cho.
+                // Trả lại danh sách các tài khoản người dùng ngoại trừ người dùng có userID đã cho
                 try {
-                    List<Model_User_Account> list = serviceUser.getUser(userID);
-                    // Gửi danh sách người dùng trở lại client.
+                    List<Model_User_Account> list = serviceUser.getUser(userID); // Lấy danh sách người dùng
+                    // Gửi danh sách người dùng trở lại client
                     sioc.sendEvent("list_user", list.toArray());
-                } catch (SQLException e) {
+                } catch (SQLException e) { // Xử lý ngoại lệ SQL
                     e.printStackTrace();
                 }
             }
         });
         
+        // Đăng ký một DisconnectListener để xử lý khi client ngắt kết nối
         server.addDisconnectListener(new DisconnectListener() {
             @Override
             public void onDisconnect(SocketIOClient sioc) {
-                int userID = removeClient(sioc);
-                if(userID != 0){
-                    userDisconnect(userID);
+                // Khi client ngắt kết nối, xác định client nào và gửi sự kiện "user_status"
+                int userID = removeClient(sioc); // Xóa client khỏi danh sách
+                if (userID != 0) {
+                    userDisconnect(userID); // Gửi sự kiện người dùng đã ngắt kết nối
                 }
             }
         });
-        // Sau đó, server sẽ bắt đầu chạy bằng cách gọi phương thức start() và ghi log vào textArea.
-        server.start();
-        textArea.append("Server has start on port: " + PORT_NUMBER + "\n");
-      
+        // Đăng ký bộ lắng nghe sự kiện gửi tin nhắn tới người dùng
+        server.addEventListener("send_to_user", Model_Send_Message.class, new DataListener<Model_Send_Message>() {
+            @Override
+            public void onData(SocketIOClient sioc, Model_Send_Message t, AckRequest ar) throws Exception {
+                sendToClient(t);
+            }
+        });
+        // Sau đó, bắt đầu server
+        server.start(); // Khởi động server
+        textArea.append("Server has start on port: " + PORT_NUMBER + "\n"); // Ghi log khi server đã khởi động
     }
-    private void userConnect(int userID){
+
+    private void userConnect(int userID) {
+        // Gửi sự kiện "user_status" cho tất cả các client, xác nhận người dùng đã kết nối
         server.getBroadcastOperations().sendEvent("user_status", userID, true);
     }
     
-    private void userDisconnect(int userID){
+    private void userDisconnect(int userID) {
+        // Gửi sự kiện "user_status" cho tất cả các client, xác nhận người dùng đã ngắt kết nối
         server.getBroadcastOperations().sendEvent("user_status", userID, false);
     }
-    private void addClient(SocketIOClient client, Model_User_Account user){
+    
+    private void addClient(SocketIOClient client, Model_User_Account user) {
+        // Thêm một client mới vào danh sách client đã kết nối
         listClient.add(new Model_Client(client, user));
     }
     
-    public int removeClient(SocketIOClient client){
-        for(Model_Client mc : listClient){
-            if(mc.getClient() == client){
-                listClient.remove(mc);
-                return mc.getUser().getUserID();
+    public int removeClient(SocketIOClient client) {
+        // Tìm và xóa client khỏi danh sách, sau đó trả lại userID của nó
+        for (Model_Client mc : listClient) {
+            if (mc.getClient().equals(client)) { // So sánh đối tượng client
+                listClient.remove(mc); // Xóa client khỏi danh sách
+                return mc.getUser().getUserID(); // Trả lại userID của client
             }
         }
-        return 0;
+        return 0; // Nếu không tìm thấy, trả về 0
     }
-    
+    // Gửi tin nhắn tới người dùng khác trong danh sách client
+    public void sendToClient(Model_Send_Message data){
+        for(Model_Client mc : listClient){
+            if(data.getToUserID() == mc.getUser().getUserID()){
+                mc.getClient().sendEvent("receive_ms", new Model_Receive_Message(data.getFromUserID(), data.getText()));
+            }
+        }
+    }
     public List<Model_Client> getListClient() {
-        return listClient;
+        return listClient; // Trả về danh sách các client
     }
 }

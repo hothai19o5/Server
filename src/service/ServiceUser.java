@@ -20,7 +20,7 @@ public class ServiceUser {
         this.con = DatabaseConnection.getInstance().getConnection();
     }
 
-    // Phương thức register nhận đối tượng Model_Register chứa thông tin người dùng muốn đăng ký.
+    // Phương thức register nhận đối tượng Model_Register chứa thông tin người dùng muốn đăng ký. Trả về thông báo kết quả đăng ký.
     public Model_Message register(Model_Register data) {
         //  Check user exit
         Model_Message message = new Model_Message();
@@ -33,8 +33,8 @@ public class ServiceUser {
                     ResultSet.TYPE_SCROLL_INSENSITIVE, // Cho phép di chuyển mà không bị ảnh hưởng bởi thay đổi cơ sở dữ liệu
                     ResultSet.CONCUR_READ_ONLY // Chỉ cho phép đọc, không thể chỉnh sửa
             );
-            p.setString(1, data.getUserName());
-            ResultSet r = p.executeQuery();
+            p.setString(1, data.getUserName()); // Đặt các giá trị vào câu lệnh
+            ResultSet r = p.executeQuery(); // Thực thi câu lệnh
             // Nếu tên người dùng đã tồn tại, message sẽ được thiết lập với action=false và thông báo "User Already Exit".
             if (r.first()) {
                 message.setAction(false);
@@ -42,6 +42,7 @@ public class ServiceUser {
             } else {
                 message.setAction(true);
             }
+            // Đóng
             r.close();
             p.close();
 
@@ -58,6 +59,7 @@ public class ServiceUser {
                 p = con.prepareStatement(INSERT_USER, PreparedStatement.RETURN_GENERATED_KEYS);
                 /*PreparedStatement.RETURN_GENERATED_KEYS là một cờ (flag) chỉ định rằng sau khi thực thi câu lệnh, các khóa chính tự động tạo ra (nếu có) sẽ được trả về.
                 Với tùy chọn này, khi gọi execute(), bạn có thể lấy các khóa chính tự động tạo ra bằng cách sử dụng phương thức getGeneratedKeys().*/
+                // Đặt giá trị vào câu lệnh và thực thi
                 p.setString(1, data.getUserName());
                 p.setString(2, data.getPassword());
                 p.execute();
@@ -68,6 +70,7 @@ public class ServiceUser {
                 p.close();
                 // Create user account
                 p = con.prepareStatement(INSERT_USER_ACCOUNT);
+                // Đặt giá trị vào câu lệnh và thực thi
                 p.setInt(1, userID);
                 p.setString(2, data.getUserName());
                 p.execute();
@@ -80,7 +83,8 @@ public class ServiceUser {
             }
         } catch (SQLException e) {
             /* Nếu có lỗi xảy ra trong quá trình thực hiện SQL, 
-                nó sẽ rollback giao dịch và trả về đối tượng Model_Message với action=false và thông báo "Server Error".*/ message.setAction(false);
+                nó sẽ rollback giao dịch và trả về đối tượng Model_Message với action=false và thông báo "Server Error".*/ 
+            message.setAction(false);
             message.setMessage("Server Error");
             e.printStackTrace();
             try {
@@ -140,7 +144,7 @@ public class ServiceUser {
         p.close();
         return list;
     }
-    
+    // Phương thức kiểm tra hoạt động
     private boolean checkUserStatus(int UserID){
         List<Model_Client> clients = Service.getInstance(null).getListClient();
         for(Model_Client mc : clients){
