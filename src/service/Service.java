@@ -127,6 +127,7 @@ public class Service {
         server.addEventListener("send_to_user", Model_Send_Message.class, new DataListener<Model_Send_Message>() {
             @Override
             public void onData(SocketIOClient sioc, Model_Send_Message t, AckRequest ar) throws Exception {
+                // Server nhận tin nhắn từ client và gửi tới người dùng đích
                 sendToClient(t);
             }
         });
@@ -160,7 +161,7 @@ public class Service {
         }
         return 0; // Nếu không tìm thấy, trả về 0
     }
-    // Gửi tin nhắn tới người dùng khác trong danh sách client
+    // Server nhận tin nhắn từ client và gửi tới người dùng đích
     public void sendToClient(Model_Send_Message data){
         for(Model_Client mc : listClient){
             if(data.getToUserID() == mc.getUser().getUserID()){
