@@ -1,9 +1,9 @@
 package app;
-
+// Các kiểu tin nhắn
 public enum MessageType {
     TEXT(1), EMOJI(2), FILE(3);
     
-    private final int value;
+    private int value;
     
     private MessageType(int value){
         this.value = value;

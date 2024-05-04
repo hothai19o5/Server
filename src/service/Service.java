@@ -51,13 +51,15 @@ public class Service {
         config.setPort(PORT_NUMBER); // Thiết lập cổng lắng nghe
         // Sau đó, tạo đối tượng SocketIOServer với cấu hình đã cho.
         server = new SocketIOServer(config); // Tạo máy chủ SocketIO với cấu hình
-        // Đăng ký một ConnectListener để xử lý sự kiện khi có client kết nối đến server và ghi log vào textArea.
+        // Đăng ký một ConnectListener để xử lý sự kiện khi có client kết nối đến server và ghi log vào textArea
+
         server.addConnectListener(new ConnectListener() {
             @Override
             public void onConnect(SocketIOClient sioc) {
                 textArea.append("One client connected\n"); // Ghi log khi có client kết nối
             }
         });
+        
         // Đăng ký sự kiện DataListener cho sự kiện "login".
         server.addEventListener("login", Model_Login.class, new DataListener<Model_Login>() {
             @Override
@@ -123,7 +125,8 @@ public class Service {
                 }
             }
         });
-        // Đăng ký bộ lắng nghe sự kiện gửi tin nhắn tới người dùng
+        
+        // Đăng ký bộ lắng nghe sự kiện từ người dùng gửi rồi gửi tin nhắn tới người dùng đích
         server.addEventListener("send_to_user", Model_Send_Message.class, new DataListener<Model_Send_Message>() {
             @Override
             public void onData(SocketIOClient sioc, Model_Send_Message t, AckRequest ar) throws Exception {
@@ -161,14 +164,16 @@ public class Service {
         }
         return 0; // Nếu không tìm thấy, trả về 0
     }
+    
     // Server nhận tin nhắn từ client và gửi tới người dùng đích
     public void sendToClient(Model_Send_Message data){
-        for(Model_Client mc : listClient){
+        for(Model_Client mc : listClient){  // Tìm người dùng đích có ID trùng với ID gửi, tìm được thì gửi
             if(data.getToUserID() == mc.getUser().getUserID()){
                 mc.getClient().sendEvent("receive_ms", new Model_Receive_Message(data.getFromUserID(), data.getText(), data.getMessageType()));
             }
         }
     }
+    
     public List<Model_Client> getListClient() {
         return listClient; // Trả về danh sách các client
     }

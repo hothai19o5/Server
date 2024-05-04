@@ -8,7 +8,7 @@ public class Model_Send_Message {
     private int fromUserID;     // ID người gửi
     private int toUserID;       // ID người nhận
     private String text;        // Nội dung tin nhắn
-    private MessageType messageType;    // Kiểu tin nhắn
+    private int messageType;    // Kiểu tin nhắn
 
     public int getFromUserID() {
         return fromUserID;
@@ -34,15 +34,15 @@ public class Model_Send_Message {
         this.text = text;
     }
     
-    public MessageType getMessageType() {
+    public int getMessageType() {
         return messageType;
     }
 
-    public void setMessageType(MessageType messageType) {
+    public void setMessageType(int messageType) {
         this.messageType = messageType;
     }
 
-    public Model_Send_Message(int fromUserID, int toUserID, String text, MessageType messageType) {
+    public Model_Send_Message(int fromUserID, int toUserID, String text, int messageType) {
         this.fromUserID = fromUserID;
         this.toUserID = toUserID;
         this.text = text;
@@ -56,7 +56,6 @@ public class Model_Send_Message {
         try {
             // Tạo các cặp khóa - dữ liệu
             JSONObject json = new JSONObject();
-            json.put("messageType", messageType.getValue());
             json.put("fromUserID", fromUserID);
             json.put("toUserID", toUserID);
             json.put("text", text);

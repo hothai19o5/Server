@@ -8,7 +8,7 @@ public class Model_Receive_Message {
 
     private int fromUserID; // ID người gửi
     private String text;    // Nội dung tin nhắn
-    private MessageType messageType;    // Kiểu tin nhắn
+    private int messageType;    // Kiểu tin nhắn
     
     public int getFromUserID() {
         return fromUserID;
@@ -26,15 +26,15 @@ public class Model_Receive_Message {
         this.text = text;
     }
     
-    public MessageType getMessageType() {
+    public int getMessageType() {
         return messageType;
     }
 
-    public void setMessageType(MessageType messageType) {
+    public void setMessageType(int messageType) {
         this.messageType = messageType;
     }
 
-    public Model_Receive_Message(int fromUserID, String text, MessageType messageType) {
+    public Model_Receive_Message(int fromUserID, String text, int messageType) {
         this.fromUserID = fromUserID;
         this.text = text;
     }
@@ -43,7 +43,6 @@ public class Model_Receive_Message {
         JSONObject obj = (JSONObject) json;
         try {
             // Lấy dữ liệu từ khóa
-            messageType = MessageType.toMessageType(obj.getInt("messageType"));
             fromUserID = obj.getInt("fromUserID");
             text = obj.getString("text");
         } catch (JSONException e) {
@@ -56,7 +55,6 @@ public class Model_Receive_Message {
         try {
             JSONObject json = new JSONObject();
             // Tạo các cặp khóa dữ liệu
-            json.put("messageType", messageType.getValue());
             json.put("fromUserID", fromUserID);
             json.put("text", text);
             return json;
