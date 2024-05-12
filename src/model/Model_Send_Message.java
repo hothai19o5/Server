@@ -5,9 +5,9 @@ import org.json.JSONObject;
 
 public class Model_Send_Message {
 
-    private int fromUserID;     // ID người gửi
-    private int toUserID;       // ID người nhận
-    private String text;        // Nội dung tin nhắn
+    private int fromUserID; // Người gửi
+    private int toUserID;   // Người nhận
+    private String text;    // Text
     private int messageType;    // Kiểu tin nhắn
 
     public int getFromUserID() {
@@ -34,11 +34,11 @@ public class Model_Send_Message {
         this.text = text;
     }
     
-    public int getMessageType() {
+    public int getMessageType(){
         return messageType;
     }
-
-    public void setMessageType(int messageType) {
+    
+    public void setMessageType(int messageType){
         this.messageType = messageType;
     }
 
@@ -56,13 +56,16 @@ public class Model_Send_Message {
         try {
             // Tạo các cặp khóa - dữ liệu
             JSONObject json = new JSONObject();
+            json.put("messageType", messageType);
             json.put("fromUserID", fromUserID);
             json.put("toUserID", toUserID);
             json.put("text", text);
             return json;
         } catch (JSONException e) {
+            System.out.println(e);
             return null;
         }
     }
 }
+
 

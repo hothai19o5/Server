@@ -1,5 +1,5 @@
 package app;
-// Các kiểu tin nhắn
+// Bị lỗi phần này nên không dùng nữa
 public enum MessageType {
     TEXT(1), EMOJI(2), FILE(3);
     
