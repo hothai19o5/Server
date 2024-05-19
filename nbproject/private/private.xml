@@ -2,6 +2,15 @@
 <project-private xmlns="http://www.netbeans.org/ns/project-private/1">
     <editor-bookmarks xmlns="http://www.netbeans.org/ns/editor-bookmarks/2" lastBookmarkId="0"/>
     <open-files xmlns="http://www.netbeans.org/ns/projectui-open-files/2">
-        <group/>
+        <group>
+            <file>file:/C:/Users/admin/Documents/NetBeansProjects/server/src/model/Model_Package_Sender.java</file>
+            <file>file:/C:/Users/admin/Documents/NetBeansProjects/server/src/service/ServiceUser.java</file>
+            <file>file:/C:/Users/admin/Documents/NetBeansProjects/server/src/model/Model_File.java</file>
+            <file>file:/C:/Users/admin/Documents/NetBeansProjects/server/src/service/ServiceFile.java</file>
+            <file>file:/C:/Users/admin/Documents/NetBeansProjects/server/src/model/Model_Receive_Image.java</file>
+            <file>file:/C:/Users/admin/Documents/NetBeansProjects/server/src/model/Model_Receive_Message.java</file>
+            <file>file:/C:/Users/admin/Documents/NetBeansProjects/server/src/model/Model_File_Receive.java</file>
+            <file>file:/C:/Users/admin/Documents/NetBeansProjects/server/src/service/Service.java</file>
+        </group>
     </open-files>
 </project-private>

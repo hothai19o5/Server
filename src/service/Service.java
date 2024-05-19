@@ -7,14 +7,18 @@ import com.corundumstudio.socketio.SocketIOServer; // Máy chủ SocketIO để 
 import com.corundumstudio.socketio.listener.ConnectListener; // Để lắng nghe sự kiện kết nối
 import com.corundumstudio.socketio.listener.DataListener; // Để lắng nghe sự kiện dữ liệu
 import com.corundumstudio.socketio.listener.DisconnectListener; // Để lắng nghe sự kiện ngắt kết nối
+import java.io.IOException;
 import java.sql.SQLException; // Xử lý ngoại lệ SQL
 import java.util.ArrayList; // Tạo danh sách các phần tử
 import java.util.List; // Khai báo loại List
 import javax.swing.JTextArea; // Để hiển thị thông tin trên giao diện người dùng
 import model.Model_Client; // Định nghĩa đối tượng Model_Client
+import model.Model_File;
 import model.Model_Login; // Định nghĩa đối tượng Model_Login
 import model.Model_Register; // Định nghĩa đối tượng Model_Register
 import model.Model_Message; // Định nghĩa đối tượng Model_Message
+import model.Model_Package_Sender;
+import model.Model_Receive_Image;
 import model.Model_Receive_Message;
 import model.Model_Send_Message;
 import model.Model_User_Account; // Định nghĩa đối tượng Model_User_Account
@@ -25,6 +29,7 @@ public class Service {
     private static Service instance; // Biến instance của lớp Singleton Service
     private SocketIOServer server; // Đối tượng SocketIOServer quản lý kết nối và giao tiếp với các client
     private ServiceUser serviceUser; // Dịch vụ quản lý người dùng
+    private ServiceFile serviceFile;
     private JTextArea textArea; // Đối tượng JTextArea để hiển thị thông tin
     private final int PORT_NUMBER = 9999; // Cổng mà máy chủ sẽ lắng nghe
     private List<Model_Client> listClient; // Danh sách các client đã kết nối
@@ -41,6 +46,7 @@ public class Service {
     private Service(JTextArea textArea) {
         this.textArea = textArea; // Lưu trữ đối tượng JTextArea
         serviceUser = new ServiceUser(); // Tạo đối tượng serviceUser mới
+        serviceFile = new ServiceFile();
         listClient = new ArrayList<>(); // Khởi tạo danh sách client rỗng
     }
 
@@ -131,7 +137,29 @@ public class Service {
             @Override
             public void onData(SocketIOClient sioc, Model_Send_Message t, AckRequest ar) throws Exception {
                 // Server nhận tin nhắn từ client và gửi tới người dùng đích
-                sendToClient(t);
+                sendToClient(t, ar);
+            }
+        });
+        // Tạo bộ lắng nghe sự kiện gửi file từ client
+        server.addEventListener("send_file", Model_Package_Sender.class, new DataListener<Model_Package_Sender>() {
+            @Override
+            public void onData(SocketIOClient sioc, Model_Package_Sender t, AckRequest ar) throws Exception {
+                try {
+                    serviceFile.receiveFile(t); // Kiểm tra đã gửi xong file chưa, nếu chưa xong thì gửi tiếp
+                    if (t.isFinish()) {
+                        ar.sendAckData(true);   // Xác nhận đã nhận được file
+                        Model_Receive_Image dataImage = new Model_Receive_Image(); 
+                        dataImage.setFileID(t.getFileID());
+                        Model_Send_Message message = serviceFile.closeFile(dataImage);
+                        //  Send to client 'message'
+//                        sendTempFileToClient(message, dataImage);
+                    } else {
+                        ar.sendAckData(true);
+                    }
+                } catch (IOException | SQLException e) {
+                    ar.sendAckData(false);
+                    e.printStackTrace();
+                }
             }
         });
         // Sau đó, bắt đầu server
@@ -166,10 +194,31 @@ public class Service {
     }
     
     // Server nhận tin nhắn từ client và gửi tới người dùng đích
-    public void sendToClient(Model_Send_Message data){
-        for(Model_Client mc : listClient){  // Tìm người dùng đích có ID trùng với ID gửi, tìm được thì gửi
-            if(data.getToUserID() == mc.getUser().getUserID()){
-                mc.getClient().sendEvent("receive_ms", new Model_Receive_Message(data.getFromUserID(), data.getText(), data.getMessageType()));
+    public void sendToClient(Model_Send_Message data, AckRequest ar){
+        if (data.getMessageType() == 3 || data.getMessageType() == 4) { // Gửi file, ảnh
+            try {
+                // Model_File được tạo từ fileID truy vấn từ DataBase với fileExtension truyền vào
+                Model_File file = serviceFile.addFileReceiver(data.getText()); 
+                serviceFile.initFile(file, data);   // Thêm cặp key_value vào HashMap
+                ar.sendAckData(file.getFileID());   // Gửi xác nhận kèm theo fileID của file vừa tạo
+            } catch (IOException | SQLException e) {
+                e.printStackTrace();
+            }
+        } else {    // Gửi text
+            for (Model_Client c : listClient) {
+                if (c.getUser().getUserID() == data.getToUserID()) {    // Tìm người dùng đích và gửi text đi 
+                    c.getClient().sendEvent("receive_ms", new Model_Receive_Message(data.getFromUserID(), data.getText(), data.getMessageType(), null));
+                    break;
+                }
+            }
+        }
+    }
+    
+    private void sendTempFileToClient(Model_Send_Message data, Model_Receive_Image dataImage) {
+        for (Model_Client c : listClient) {
+            if (c.getUser().getUserID() == data.getToUserID()) {
+                c.getClient().sendEvent("receive_ms", new Model_Receive_Message(data.getFromUserID(), data.getText(), 3, dataImage));
+                break;
             }
         }
     }
