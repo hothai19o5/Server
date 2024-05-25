@@ -150,9 +150,9 @@ public class Service {
                         ar.sendAckData(true);   // Xác nhận đã nhận được file
                         Model_Receive_Image dataImage = new Model_Receive_Image(); 
                         dataImage.setFileID(t.getFileID());
-                        Model_Send_Message message = serviceFile.closeFile(dataImage);
-                        //  Send to client 'message'
-//                        sendTempFileToClient(message, dataImage);
+                        Model_Send_Message message = serviceFile.closeFile(dataImage);  // Tạo message là ảnh dạng BlurHash hoặc text 
+                        //  Gửi message tới client đích
+                        sendTempFileToClient(message, dataImage);
                     } else {
                         ar.sendAckData(true);
                     }
@@ -213,7 +213,7 @@ public class Service {
             }
         }
     }
-    
+    // Tìm client đích và gửi ảnh đã mã hóa tới
     private void sendTempFileToClient(Model_Send_Message data, Model_Receive_Image dataImage) {
         for (Model_Client c : listClient) {
             if (c.getUser().getUserID() == data.getToUserID()) {

@@ -41,7 +41,7 @@ public class ServiceFile {
         p.close();
         return data;
     }
-
+    // Cập nhật Status, BlurHash trong TABLE files 
     public void updateBlurHashDone(int fileID, String blurhash) throws SQLException {
         PreparedStatement p = con.prepareStatement(UPDATE_BLUR_HASH_DONE);
         p.setString(1, blurhash);
@@ -73,30 +73,34 @@ public class ServiceFile {
         Model_File_Receive file = fileReceivers.get(dataImage.getFileID());
         if (file.getMessage().getMessageType() == 3) {  // Ảnh
             file.getMessage().setText(""); 
-            String blurhash = convertFileToBlurHash(file.getFile(), dataImage);
-            updateBlurHashDone(dataImage.getFileID(), blurhash);
+            String blurhash = convertFileToBlurHash(file.getFile(), dataImage); // chuyển đổi ảnh sang ảnh mờ
+            updateBlurHashDone(dataImage.getFileID(), blurhash);    // Cập nhật Status trong files
         } else {
-            updateDone(dataImage.getFileID());
+            updateDone(dataImage.getFileID());  // Cập nhật Status trong files
         }
-        fileReceivers.remove(dataImage.getFileID());
-        //  Get message to send to target client when file receive finish
+        fileReceivers.remove(dataImage.getFileID());    // Xóa khỏi Map vì đã gửi xong
+        //  Trả về message để gửi tới client đích sau khi server nhận được ảnh từ client nguồn
         return file.getMessage();
     }
-
+    // Chuyển ảnh sang BlurHash
     private String convertFileToBlurHash(File file, Model_Receive_Image dataImage) throws IOException {
+        // BufferedImage là một lớp trong Java được sử dụng để lưu trữ hình ảnh dưới dạng bộ nhớ đệm (buffered), nghĩa là hình ảnh được lưu trữ trong bộ nhớ RAM.
+        // Cần sử dụng BufferedImage để sử dụng BlurHash
         BufferedImage img = ImageIO.read(file);
+        // getAutoSize() là phương thức chuyển đổi kích thước của ảnh, chuyển từ kích thước ảnh gốc tới kích thước mới bị giới hạn
         Dimension size = getAutoSize(new Dimension(img.getWidth(), img.getHeight()), new Dimension(200, 200));
-        //  Convert image to small size
+        //  Chuyển ảnh sang kích cỡ mới
         BufferedImage newImage = new BufferedImage(size.width, size.height, BufferedImage.TYPE_INT_ARGB);
+        // TYPE_INT_ARGB để xác định loại hình ảnh được tạo, 32 bit, bao gồm cả bit A ( độ trong suốt )
         Graphics2D g2 = newImage.createGraphics();
         g2.drawImage(img, 0, 0, size.width, size.height, null);
-        String blurhash = BlurHash.encode(newImage);
+        String blurhash = BlurHash.encode(newImage);    // Làm mờ ảnh bằng BlurHash
         dataImage.setWidth(size.width);
         dataImage.setHeight(size.height);
-        dataImage.setImage(blurhash);
+        dataImage.setImage(blurhash);   // Set ảnh mới là ảnh mờ
         return blurhash;
     }
-
+    // getAutoSize() là phương thức chuyển đổi kích thước của ảnh, chuyển từ kích thước ảnh gốc tới kích thước mới bị giới hạn
     private Dimension getAutoSize(Dimension fromSize, Dimension toSize) {
         int w = toSize.width;
         int h = toSize.height;
@@ -116,11 +120,11 @@ public class ServiceFile {
 
     //  SQL
     private final String PATH_FILE = "server_data/";    // Đích để lưu các file gửi từ client tới server
-    private final String INSERT = "insert into files (FileExtension) values (?)";   // Lưu phần mở rộng file vào database
+    private final String INSERT = "INSERT INTO files (FileExtension) VALUES (?)";   // Lưu phần mở rộng file vào database
     // Update giá trị cột BlurHash và thiết lập Status = 1 tại bản ghi có FileID bằng giá trị nhập vào, chỉ lấy 1 bản ghi
-    private final String UPDATE_BLUR_HASH_DONE = "update files set BlurHash=?, `Status`='1' where FileID=? limit 1"; 
+    private final String UPDATE_BLUR_HASH_DONE = "UPDATE files SET BlurHash=?, `Status`='1' WHERE FileID=? LIMIT 1"; 
     // Update giá trị Status = 1 tại bản ghi có FileID bằng giá trị truyền vào, chỉ lấy 1 bản ghi
-    private final String UPDATE_DONE = "update files set `Status`='1' where FileID=? limit 1";
+    private final String UPDATE_DONE = "UPDATE files SET `Status`='1' WHERE FileID=? LIMIT 1";
     //  Instance
     private final Connection con;   
     private final Map<Integer, Model_File_Receive> fileReceivers;
