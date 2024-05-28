@@ -14,6 +14,7 @@ import java.util.Map;
 import model.Model_File;
 import java.sql.ResultSet;
 import javax.imageio.ImageIO;
+import model.Model_File_Sender;
 import model.Model_File_Receive;
 import model.Model_Package_Sender;
 import model.Model_Receive_Image;
@@ -25,6 +26,7 @@ public class ServiceFile {
     public ServiceFile() {
         this.con = DatabaseConnection.getInstance().getConnection();
         this.fileReceivers = new HashMap<>();
+        this.fileSenders = new HashMap<>();
     }
 
     public Model_File addFileReceiver(String fileExtension) throws SQLException {
@@ -59,6 +61,38 @@ public class ServiceFile {
     // Thêm một cặp khóa giá trị vào HashMap
     public void initFile(Model_File file, Model_Send_Message message) throws IOException {
         fileReceivers.put(file.getFileID(), new Model_File_Receive(message, toFileObject(file)));
+    }
+    // trả về fileID, fileExtension từ fileID
+    public Model_File getFile(int fileID) throws SQLException {
+        PreparedStatement p = con.prepareStatement(GET_FILE_EXTENSION); // Chuẩn bị câu lệnh sql
+        p.setInt(1, fileID);    // Đưa giá trị vào câu lệnh SQL
+        ResultSet r = p.executeQuery(); // Thực hiện câu lệnh
+        r.first();
+        String fileExtension = r.getString(1);
+        Model_File data = new Model_File(fileID, fileExtension);
+        r.close();
+        p.close();
+        return data;
+    }
+    // từ fileID truyền vào, nếu chưa có trong map thì thêm vào, trả về fileID và fileExtension
+    public synchronized Model_File initFile(int fileID) throws IOException, SQLException {
+        Model_File file;
+        if(!fileSenders.containsKey(fileID)) {
+            file = getFile(fileID);
+            fileSenders.put(fileID, new Model_File_Sender(new File(PATH_FILE + fileID + file.getFileExtension()), file));
+        }else{
+            file = fileSenders.get(fileID).getData();
+        }
+        return file;
+    }
+    
+    public byte[] getFileData(long currentLength, int fileID) throws IOException, SQLException {
+        initFile(fileID);
+        return fileSenders.get(fileID).readFile(currentLength);
+    }
+    
+    public long getFileSize(int fileID) {
+        return fileSenders.get(fileID).getFileSize();
     }
     
     public void receiveFile(Model_Package_Sender dataPackage) throws IOException {
@@ -125,8 +159,11 @@ public class ServiceFile {
     private final String UPDATE_BLUR_HASH_DONE = "UPDATE files SET BlurHash=?, `Status`='1' WHERE FileID=? LIMIT 1"; 
     // Update giá trị Status = 1 tại bản ghi có FileID bằng giá trị truyền vào, chỉ lấy 1 bản ghi
     private final String UPDATE_DONE = "UPDATE files SET `Status`='1' WHERE FileID=? LIMIT 1";
+    // Lấy phần mở rộng file theo FileID, chỉ lấy 1 bản 
+    private final String GET_FILE_EXTENSION = "SELECT FileExtension FROM files WHERE FileID = ? LIMIT 1";
     //  Instance
-    private final Connection con;   
-    private final Map<Integer, Model_File_Receive> fileReceivers;
+    private final Connection con;       // Kết nối với database
+    private final Map<Integer, Model_File_Receive> fileReceivers;   // Khóa là FileID, giá trị là Model_File_Receive
+    private final Map<Integer, Model_File_Sender> fileSenders;      // Khóa là FileID, giá tị là Model_File_Sender
 }
 

@@ -1,6 +1,10 @@
 package model;
 
 // Gói tin để chuyển dữ liệu file
+
+import org.json.JSONException;
+import org.json.JSONObject;
+
 public class Model_Package_Sender {
     private int fileID;
     private byte[] data;
@@ -39,4 +43,16 @@ public class Model_Package_Sender {
         this.finish = finish;
     }
     
+    public JSONObject toJSONObject(){
+        try {
+            JSONObject json = new JSONObject();
+            json.put("fileID", fileID);
+            json.put("data", data);
+            json.put("finish", finish);
+            return json;
+        } catch (JSONException e) {
+            e.printStackTrace();
+            return null;
+        }
+    }
 }

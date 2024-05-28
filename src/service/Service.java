@@ -20,6 +20,7 @@ import model.Model_Message; // Định nghĩa đối tượng Model_Message
 import model.Model_Package_Sender;
 import model.Model_Receive_Image;
 import model.Model_Receive_Message;
+import model.Model_Request_File;
 import model.Model_Send_Message;
 import model.Model_User_Account; // Định nghĩa đối tượng Model_User_Account
 
@@ -159,6 +160,29 @@ public class Service {
                 } catch (IOException | SQLException e) {
                     ar.sendAckData(false);
                     e.printStackTrace();
+                }
+            }
+        });
+        
+        server.addEventListener("get_file", Integer.class, new DataListener<Integer>() {
+            @Override
+            public void onData(SocketIOClient sioc, Integer t, AckRequest ar) throws Exception {
+                Model_File file = serviceFile.initFile(t);
+                long fileSize = serviceFile.getFileSize(t);
+                ar.sendAckData(file.getFileExtension(), fileSize);
+                System.out.println("get_file Service Server");
+            }
+        });
+        
+        server.addEventListener("request_file", Model_Request_File.class, new DataListener<Model_Request_File>() {
+            @Override
+            public void onData(SocketIOClient sioc, Model_Request_File t, AckRequest ar) throws Exception {
+                byte[] data = serviceFile.getFileData( t.getCurrentLength(), t.getFileID());
+                if(data != null) {
+                    ar.sendAckData(data);
+                }else{
+                    ar.sendAckData();
+                    System.out.println("request_file Service Server");
                 }
             }
         });

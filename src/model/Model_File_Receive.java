@@ -20,7 +20,7 @@ public class Model_File_Receive {
     }
     // Ghi dữ liệu file vào trong một mảng byte
     public synchronized long writeFile(byte[] data) throws IOException {
-        accessFile.seek(file.length()); // Di chuyển con trỏ file tới cuối file
+        accessFile.seek(accessFile.length()); // Di chuyển con trỏ file tới cuối file
         accessFile.write(data); // Ghi tiếp dữ liệu vào                                                                                                                                                                                                                                                 
         return accessFile.length();
     }
