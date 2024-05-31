@@ -64,7 +64,10 @@ public class ServiceFile {
     }
     // trả về fileID, fileExtension từ fileID
     public Model_File getFile(int fileID) throws SQLException {
-        PreparedStatement p = con.prepareStatement(GET_FILE_EXTENSION); // Chuẩn bị câu lệnh sql
+        PreparedStatement p = con.prepareStatement(GET_FILE_EXTENSION,
+                    ResultSet.TYPE_SCROLL_INSENSITIVE, // Cho phép di chuyển mà không bị ảnh hưởng bởi thay đổi cơ sở dữ liệu
+                    ResultSet.CONCUR_READ_ONLY // Chỉ cho phép đọc, không thể chỉnh sửa
+            );  // bug này fix 5 ngày mới tìm ra 
         p.setInt(1, fileID);    // Đưa giá trị vào câu lệnh SQL
         ResultSet r = p.executeQuery(); // Thực hiện câu lệnh
         r.first();
@@ -77,12 +80,16 @@ public class ServiceFile {
     // từ fileID truyền vào, nếu chưa có trong map thì thêm vào, trả về fileID và fileExtension
     public synchronized Model_File initFile(int fileID) throws IOException, SQLException {
         Model_File file;
+        System.out.println("Server serviceFile initFile bat dau");
         if(!fileSenders.containsKey(fileID)) {
+            System.out.println("Server serviceFile initFile !fileSenders.containsKey(fileID)");
             file = getFile(fileID);
+            System.out.println("Server serviceFile initFile !fileSenders.containsKey(fileID) file = getFile(fileID)");
             fileSenders.put(fileID, new Model_File_Sender(new File(PATH_FILE + fileID + file.getFileExtension()), file));
         }else{
             file = fileSenders.get(fileID).getData();
         }
+        System.out.println("Server serviceFile initFile(fileID)");
         return file;
     }
     

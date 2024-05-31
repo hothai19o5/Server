@@ -149,6 +149,7 @@ public class Service {
                     serviceFile.receiveFile(t); // Kiểm tra đã gửi xong file chưa, nếu chưa xong thì gửi tiếp
                     if (t.isFinish()) {
                         ar.sendAckData(true);   // Xác nhận đã nhận được file
+                        System.out.println("Server nhan duoc su kien send_file");
                         Model_Receive_Image dataImage = new Model_Receive_Image(); 
                         dataImage.setFileID(t.getFileID());
                         Model_Send_Message message = serviceFile.closeFile(dataImage);  // Tạo message là ảnh dạng BlurHash hoặc text 
@@ -167,10 +168,12 @@ public class Service {
         server.addEventListener("get_file", Integer.class, new DataListener<Integer>() {
             @Override
             public void onData(SocketIOClient sioc, Integer t, AckRequest ar) throws Exception {
+                System.out.println("Server service nghe duoc su kien get_file");
                 Model_File file = serviceFile.initFile(t);
+                System.out.println("Server service nghe duoc su kien get_file va thuc hien duoc initFile");
                 long fileSize = serviceFile.getFileSize(t);
                 ar.sendAckData(file.getFileExtension(), fileSize);
-                System.out.println("get_file Service Server");
+                System.out.println("Server service event get_file");
             }
         });
         
@@ -182,7 +185,7 @@ public class Service {
                     ar.sendAckData(data);
                 }else{
                     ar.sendAckData();
-                    System.out.println("request_file Service Server");
+                    System.out.println("Server service event request_file");
                 }
             }
         });
@@ -242,6 +245,7 @@ public class Service {
         for (Model_Client c : listClient) {
             if (c.getUser().getUserID() == data.getToUserID()) {
                 c.getClient().sendEvent("receive_ms", new Model_Receive_Message(data.getFromUserID(), data.getText(), 3, dataImage));
+                System.out.println("Server send Event receive_ms");
                 break;
             }
         }
